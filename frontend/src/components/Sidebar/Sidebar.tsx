@@ -11,7 +11,7 @@ import styles from './Sidebar.module.css';
 
 const navItems = [
   { path: '/dashboard', label: 'Pulpit', icon: <AppstoreOutlined /> },
-  { path: '/hisotry', label: 'Historia', icon: <HistoryOutlined /> },
+  { path: '/history', label: 'Historia', icon: <HistoryOutlined /> },
   { path: '/categories', label: 'Kategorie', icon: <TagsOutlined /> },
 ];
 

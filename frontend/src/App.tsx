@@ -25,16 +25,8 @@ const router = createBrowserRouter([
             element: <Dashboard />,
           },
           {
-            path: '/historia',
-            element: <HistoryPage />,
-          },
-          {
             path: '/history',
             element: <HistoryPage />,
-          },
-          {
-            path: '/kategorie',
-            element: <CategoriesPage />,
           },
           {
             path: '/categories',
