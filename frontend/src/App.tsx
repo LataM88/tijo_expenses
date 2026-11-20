@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AuthPage } from './pages/auth/AuthPage';
 import { Layout } from './components/Layout/Layout';
 import { Dashboard } from './pages/dashboard/Dashboard';
+import { HistoryPage } from './pages/history/HistoryPage';
 
 const router = createBrowserRouter([
   {
@@ -17,12 +18,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/historia',
-        element: (
-          <div style={{ padding: '2rem' }}>
-            <h2>Historia wydatków</h2>
-            <p>Wkrótce...</p>
-          </div>
-        ),
+        element: <HistoryPage />,
       },
       {
         path: '/kategorie',

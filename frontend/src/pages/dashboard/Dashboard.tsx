@@ -1,35 +1,26 @@
-import { RightOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { useState, useMemo } from 'react';
+import { RightOutlined, ArrowDownOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Row, Col, Typography, Spin, Empty } from 'antd';
 import { Link } from 'react-router-dom';
 import { AddExpenseButton } from '../../components/AddExpenseButton/AddExpenseButton';
+import { AddExpenseModal } from '../../components/AddExpenseModal/AddExpenseModal';
+import { useExpenses } from '../../hooks/useExpenses';
 import styles from './Dashboard.module.css';
 
-// ===== Dane mockowe (do podpięcia z API później) =====
-const MOCK_CATEGORIES = [
-  { name: 'Mieszkanie', color: '#4f46e5', amount: 1800, percent: 42.1 },
-  { name: 'Jedzenie', color: '#8b5cf6', amount: 1120, percent: 26.2 },
-  { name: 'Transport', color: '#10b981', amount: 480, percent: 11.2 },
-  { name: 'Rozrywka', color: '#f59e0b', amount: 360, percent: 8.4 },
-  { name: 'Zdrowie', color: '#ef4444', amount: 320, percent: 7.5 },
-  { name: 'Inne', color: '#6b7280', amount: 200, percent: 4.7 },
-];
+const { Title, Paragraph, Text } = Typography;
 
-const TOTAL_AMOUNT = 4280;
-const EXPENSES_COUNT = 9;
-const CURRENT_MONTH = 'Listopad 2026';
-
-// Formatowanie kwoty po polsku
 const formatPLN = (amount: number) =>
   amount.toLocaleString('pl-PL', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
-// ===== SVG Donut Chart =====
+// SVG Donut Chart z rzeczywistymi danymi
 const DonutChart = ({
   categories,
   total,
 }: {
-  categories: typeof MOCK_CATEGORIES;
+  categories: { name: string; color: string; amount: number; percent: number }[];
   total: number;
 }) => {
   const size = 220;
@@ -39,11 +30,33 @@ const DonutChart = ({
 
   let cumulativePercent = 0;
 
+  if (total === 0 || categories.length === 0) {
+    return (
+      <div className={styles.donutWrapper}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth={strokeWidth}
+          />
+        </svg>
+        <div className={styles.donutCenter}>
+          <Text className={styles.donutCenterLabel}>Łącznie</Text>
+          <Text strong className={styles.donutCenterAmount}>0,00 zł</Text>
+          <Text className={styles.donutCenterCount}>0 kategorii</Text>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.donutWrapper}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {categories.map((cat, i) => {
-          const percent = cat.amount / total;
+          const percent = total > 0 ? cat.amount / total : 0;
           const strokeDasharray = `${circumference * percent} ${circumference * (1 - percent)}`;
           const strokeDashoffset = -circumference * cumulativePercent;
           cumulativePercent += percent;
@@ -55,7 +68,7 @@ const DonutChart = ({
               cy={size / 2}
               r={radius}
               fill="none"
-              stroke={cat.color}
+              stroke={cat.color || '#6b7280'}
               strokeWidth={strokeWidth}
               strokeDasharray={strokeDasharray}
               strokeDashoffset={strokeDashoffset}
@@ -66,120 +79,230 @@ const DonutChart = ({
         })}
       </svg>
       <div className={styles.donutCenter}>
-        <span className={styles.donutCenterLabel}>Łącznie</span>
-        <span className={styles.donutCenterAmount}>
+        <Text className={styles.donutCenterLabel}>Łącznie</Text>
+        <Text strong className={styles.donutCenterAmount}>
           {total.toLocaleString('pl-PL')} zł
-        </span>
-        <span className={styles.donutCenterCount}>
-          {categories.length} kategorii
-        </span>
+        </Text>
+        <Text className={styles.donutCenterCount}>
+          {categories.length} {categories.length === 1 ? 'kategoria' : 'kategorii'}
+        </Text>
       </div>
     </div>
   );
 };
 
-// ===== Dashboard =====
 export const Dashboard = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: expenses = [], isLoading, error } = useExpenses();
+
   const today = new Date();
+  const currentMonthName = today.toLocaleString('pl-PL', { month: 'long', year: 'numeric' });
+  const formattedMonth =
+    currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
   const dayOfMonth = today.getDate();
+
+  // Przetwarzanie rzeczywistych danych pobranych z endpointu
+  const { totalAmount, categoryBreakdown, lastExpense } = useMemo(() => {
+    let sum = 0;
+    const catMap: Record<
+      string,
+      { name: string; color: string; amount: number }
+    > = {};
+
+    for (const exp of expenses) {
+      const amount = Number(exp.amount) || 0;
+      sum += amount;
+
+      const catName = exp.category?.name || 'Inne';
+      const catColor = exp.category?.color || '#6b7280';
+
+      if (!catMap[catName]) {
+        catMap[catName] = { name: catName, color: catColor, amount: 0 };
+      }
+      catMap[catName].amount += amount;
+    }
+
+    const breakdown = Object.values(catMap)
+      .map((cat) => ({
+        ...cat,
+        percent: sum > 0 ? Number(((cat.amount / sum) * 100).toFixed(1)) : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    return {
+      totalAmount: sum,
+      categoryBreakdown: breakdown,
+      lastExpense: expenses.length > 0 ? expenses[0] : null,
+    };
+  }, [expenses]);
 
   return (
     <>
       {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <span className={styles.headerLabel}>Twoje finanse</span>
-          <h1 className={styles.headerTitle}>Pulpit</h1>
-          <p className={styles.headerSubtitle}>
+      <Row justify="space-between" align="top" className={styles.header}>
+        <Col xs={24} sm={16} className={styles.headerLeft}>
+          <Text className={styles.headerLabel}>Twoje finanse</Text>
+          <Title level={1} className={styles.headerTitle}>
+            Pulpit
+          </Title>
+          <Paragraph className={styles.headerSubtitle}>
             Wiesz, na co wydajesz. I masz nad tym kontrolę.
-          </p>
-        </div>
-        <button className={styles.monthSelector}>
-          {CURRENT_MONTH} <RightOutlined />
-        </button>
-      </div>
+          </Paragraph>
+        </Col>
+        <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
+          <button className={styles.monthSelector}>
+            {formattedMonth} <RightOutlined />
+          </button>
+        </Col>
+      </Row>
 
-      {/* Karty podsumowania */}
-      <div className={styles.summaryRow}>
-        <div className={styles.summaryCardPrimary}>
-          <div className={styles.summaryCardLabel}>Wydatki w tym miesiącu</div>
-          <div className={styles.summaryAmount}>
-            {formatPLN(TOTAL_AMOUNT)}
-            <span className={styles.summaryAmountUnit}>zł</span>
-          </div>
-          <div className={styles.summaryBadge}>
-            <ArrowDownOutlined /> 11,9% mniej niż w październiku
+      {isLoading ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <Spin indicator={<LoadingOutlined style={{ fontSize: 36 }} spin />} />
+          <div style={{ marginTop: 16 }}>
+            <Text type="secondary">Pobieranie danych z serwera...</Text>
           </div>
         </div>
-
-        <div className={styles.summaryCard}>
-          <div className={styles.countCardMonth}>{CURRENT_MONTH}</div>
-          <div className={styles.countCardNumber}>{EXPENSES_COUNT}</div>
-          <div className={styles.countCardText}>zapisanych wydatków</div>
-          <div className={styles.countCardDate}>Stan na {dayOfMonth} listopada</div>
+      ) : error ? (
+        <div style={{ padding: 24, textAlign: 'center' }}>
+          <Text type="danger">Wystąpił błąd: {error.message}</Text>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Karty podsumowania z danymi dynamicznymi */}
+          <Row gutter={[16, 16]} className={styles.summaryRow}>
+            <Col xs={24} lg={16}>
+              <div className={styles.summaryCardPrimary}>
+                <Text className={styles.summaryCardLabel}>
+                  Wydatki w tym miesiącu
+                </Text>
+                <div className={styles.summaryAmount}>
+                  {formatPLN(totalAmount)}
+                  <span className={styles.summaryAmountUnit}>zł</span>
+                </div>
+                <div className={styles.summaryBadge}>
+                  <ArrowDownOutlined /> Bieżące podsumowanie wydatków
+                </div>
+              </div>
+            </Col>
 
-      {/* Sekcja kategorii */}
-      <div className={styles.categorySection}>
-        <div className={styles.categorySectionHeader}>
-          <h2 className={styles.categorySectionTitle}>Na co wydajesz?</h2>
-          <p className={styles.categorySectionSubtitle}>
-            Każda kategoria ma swoje miejsce.
-          </p>
-        </div>
+            <Col xs={24} lg={8}>
+              <div className={styles.summaryCard}>
+                <Text strong className={styles.countCardMonth}>
+                  {formattedMonth}
+                </Text>
+                <div className={styles.countCardNumber}>{expenses.length}</div>
+                <Paragraph className={styles.countCardText}>
+                  zapisanych wydatków
+                </Paragraph>
+                <Text className={styles.countCardDate}>
+                  Stan na dzień {dayOfMonth}
+                </Text>
+              </div>
+            </Col>
+          </Row>
 
-        <div className={styles.categoryContent}>
-          <DonutChart categories={MOCK_CATEGORIES} total={TOTAL_AMOUNT} />
-
-          <div className={styles.categoryList}>
-            <div className={styles.categoryListHeader}>
-              <span className={styles.categoryListHeaderLabel}>Kategoria</span>
-              <span className={styles.categoryListHeaderLabel}>
-                Kwota / Udział
-              </span>
-              <span className={styles.categoryListHeaderLabel}>&nbsp;</span>
+          {/* Sekcja kategorii */}
+          <div className={styles.categorySection}>
+            <div className={styles.categorySectionHeader}>
+              <Title level={2} className={styles.categorySectionTitle}>
+                Na co wydajesz?
+              </Title>
+              <Paragraph className={styles.categorySectionSubtitle}>
+                Każda kategoria ma swoje miejsce.
+              </Paragraph>
             </div>
 
-            {MOCK_CATEGORIES.map((cat) => (
-              <div className={styles.categoryRow} key={cat.name}>
-                <div className={styles.categoryName}>
-                  <span
-                    className={styles.categoryDot}
-                    style={{ backgroundColor: cat.color }}
-                  />
-                  {cat.name}
-                </div>
-                <span className={styles.categoryAmount}>
-                  {formatPLN(cat.amount)} zł
-                </span>
-                <span className={styles.categoryPercent}>{cat.percent}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            {categoryBreakdown.length === 0 ? (
+              <Empty description="Brak wydatków w wybranym okresie. Dodaj pierwszy wydatek!" />
+            ) : (
+              <Row gutter={[32, 24]} align="middle" className={styles.categoryContent}>
+                <Col xs={24} md={10} lg={8} style={{ display: 'flex', justifyContent: 'center' }}>
+                  <DonutChart categories={categoryBreakdown} total={totalAmount} />
+                </Col>
 
-      {/* Ostatni wydatek */}
-      <div className={styles.lastExpense}>
-        <div className={styles.lastExpenseBadge}>{dayOfMonth}</div>
-        <div className={styles.lastExpenseInfo}>
-          <span className={styles.lastExpenseLabel}>Ostatni wydatek</span>
-          <div className={styles.lastExpenseName}>Zakupy spożywcze</div>
-        </div>
-        <span className={styles.lastExpenseMeta}>Jedzenie · Dzisiaj</span>
-        <span className={styles.lastExpenseAmount}>{formatPLN(420)} zł</span>
-        <Link to="/historia" className={styles.lastExpenseLink}>
-          Zobacz historię <RightOutlined />
-        </Link>
-      </div>
+                <Col xs={24} md={14} lg={16}>
+                  <div className={styles.categoryList}>
+                    <Row className={styles.categoryListHeader}>
+                      <Col span={12}>
+                        <Text className={styles.categoryListHeaderLabel}>Kategoria</Text>
+                      </Col>
+                      <Col span={8} style={{ textAlign: 'right' }}>
+                        <Text className={styles.categoryListHeaderLabel}>
+                          Kwota / Udział
+                        </Text>
+                      </Col>
+                      <Col span={4}>&nbsp;</Col>
+                    </Row>
+
+                    {categoryBreakdown.map((cat) => (
+                      <Row
+                        key={cat.name}
+                        align="middle"
+                        className={styles.categoryRow}
+                      >
+                        <Col span={12} className={styles.categoryName}>
+                          <span
+                            className={styles.categoryDot}
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          <Text>{cat.name}</Text>
+                        </Col>
+                        <Col span={8} style={{ textAlign: 'right' }}>
+                          <Text strong className={styles.categoryAmount}>
+                            {formatPLN(cat.amount)} zł
+                          </Text>
+                        </Col>
+                        <Col span={4} style={{ textAlign: 'right' }}>
+                          <Text className={styles.categoryPercent}>{cat.percent}%</Text>
+                        </Col>
+                      </Row>
+                    ))}
+                  </div>
+                </Col>
+              </Row>
+            )}
+          </div>
+
+          {/* Ostatni wydatek */}
+          {lastExpense && (
+            <div className={styles.lastExpense}>
+              <Row align="middle" justify="space-between" gutter={[16, 16]} style={{ width: '100%' }}>
+                <Col xs={24} md={12} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div className={styles.lastExpenseBadge}>
+                    {lastExpense.date.split('-')[2] || '•'}
+                  </div>
+                  <div>
+                    <Text className={styles.lastExpenseLabel}>Ostatni wydatek</Text>
+                    <Title level={4} className={styles.lastExpenseName} style={{ margin: 0 }}>
+                      {lastExpense.description || 'Wydatek'}
+                    </Title>
+                    <Text className={styles.lastExpenseMeta}>
+                      {lastExpense.category?.name} · {lastExpense.date}
+                    </Text>
+                  </div>
+                </Col>
+                <Col xs={24} md={12} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 20 }}>
+                  <Text strong className={styles.lastExpenseAmount}>
+                    {formatPLN(Number(lastExpense.amount))} zł
+                  </Text>
+                  <Link to="/historia" className={styles.lastExpenseLink}>
+                    Zobacz historię <RightOutlined />
+                  </Link>
+                </Col>
+              </Row>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Przycisk "Dodaj wydatek" */}
-      <AddExpenseButton
-        fixed
-        onClick={() => {
-          /* TODO: otwórz modal */
-        }}
+      <AddExpenseButton fixed onClick={() => setIsModalOpen(true)} />
+
+      {/* Modal dodawania nowego wydatku */}
+      <AddExpenseModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
       />
     </>
   );

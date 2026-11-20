@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Col, Row, Typography, Alert } from 'antd';
 import { useForm } from 'react-hook-form';
 import type { LoginRequest, Signup } from '../../types/types';
@@ -11,6 +12,7 @@ const { Title, Text } = Typography;
 export const AuthPage = () => {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const navigate = useNavigate();
 
   // Formularz logowania
   const {
@@ -39,7 +41,10 @@ export const AuthPage = () => {
 
   const onLoginSubmit = (data: LoginRequest) => {
     loginMutation.mutate(data, {
-      onSuccess: () => resetLogin(),
+      onSuccess: () => {
+        resetLogin();
+        navigate('/dashboard');
+      },
     });
   };
 
