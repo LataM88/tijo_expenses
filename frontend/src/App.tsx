@@ -3,6 +3,7 @@ import { AuthPage } from './pages/auth/AuthPage';
 import { Layout } from './components/Layout/Layout';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { HistoryPage } from './pages/history/HistoryPage';
+import { CategoriesPage } from './pages/categories/CategoriesPage';
 
 const router = createBrowserRouter([
   {
@@ -22,12 +23,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/kategorie',
-        element: (
-          <div style={{ padding: '2rem' }}>
-            <h2>Kategorie</h2>
-            <p>Wkrótce...</p>
-          </div>
-        ),
+        element: <CategoriesPage />,
       },
     ],
   },

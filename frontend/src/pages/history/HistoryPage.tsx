@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   RightOutlined,
   LeftOutlined,
@@ -8,42 +8,20 @@ import {
 } from '@ant-design/icons';
 import { Row, Col, Typography, Spin, Empty, Popconfirm } from 'antd';
 import { AddExpenseButton } from '../../components/AddExpenseButton/AddExpenseButton';
-import { AddExpenseModal } from '../../components/AddExpenseModal/AddExpenseModal';
 import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
+import { formatPLN, formatDatePL, formatMonthPL, formatExpenseCount } from '../../utils/formatters';
 import type { Expense } from '../../types/types';
 import styles from './HistoryPage.module.css';
 
 const { Title, Paragraph, Text } = Typography;
 
-const formatPLN = (amount: number) =>
-  amount.toLocaleString('pl-PL', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-const formatDatePL = (dateString: string) => {
-  try {
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return dateString;
-    return d.toLocaleDateString('pl-PL', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  } catch {
-    return dateString;
-  }
-};
-
 export const HistoryPage = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: expenses = [], isLoading, error } = useExpenses();
   const deleteMutation = useDeleteExpense();
 
-  const today = new Date();
-  const currentMonthName = today.toLocaleString('pl-PL', { month: 'long', year: 'numeric' });
-  const formattedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
+  const formattedMonth = formatMonthPL();
 
+  // Podsumowanie rzeczywistych wydatków
   const totalAmount = useMemo(() => {
     return expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   }, [expenses]);
@@ -58,6 +36,7 @@ export const HistoryPage = () => {
 
   return (
     <>
+      {/* Header */}
       <Row justify="space-between" align="top" className={styles.header}>
         <Col xs={24} sm={16} className={styles.headerLeft}>
           <Text className={styles.headerLabel}>Twoje finanse</Text>
@@ -91,16 +70,17 @@ export const HistoryPage = () => {
               </button>
             </div>
             <Text className={styles.expensesCountLabel}>
-              {expenses.length} {expenses.length === 1 ? 'wydatek' : 'wydatków'}
+              {formatExpenseCount(expenses.length)}
             </Text>
           </div>
         </Col>
 
         <Col>
-          <AddExpenseButton onClick={() => setIsModalOpen(true)} />
+          <AddExpenseButton onClick={() => {}} />
         </Col>
       </Row>
 
+      {/* Tabela wydatków z danymi z backendu */}
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <Spin indicator={<LoadingOutlined style={{ fontSize: 36 }} spin />} />
@@ -131,7 +111,10 @@ export const HistoryPage = () => {
                   <th className={styles.th} style={{ width: '45%' }}>
                     <Text className={styles.thLabel}>Opis</Text>
                   </th>
-                  <th className={`${styles.th} ${styles.thAmount}`} style={{ width: '20%' }}>
+                  <th
+                    className={`${styles.th} ${styles.thAmount}`}
+                    style={{ width: '20%' }}
+                  >
                     <Text className={styles.thLabel}>Kwota</Text>
                   </th>
                 </tr>
@@ -167,7 +150,7 @@ export const HistoryPage = () => {
                       <td className={styles.td}>
                         <div className={styles.tdAmountWrapper}>
                           <Text strong className={styles.amountText}>
-                            {formatPLN(Number(expense.amount))} zł
+                            {formatPLN(expense.amount)} zł
                           </Text>
                           <div className={styles.actions}>
                             <button
@@ -201,14 +184,18 @@ export const HistoryPage = () => {
               </tbody>
             </table>
 
+            {/* Podsumowanie w stopce tabeli */}
             <div className={styles.tableFooter}>
-              <Text className={styles.footerTotalLabel}>Łącznie w wybranym okresie</Text>
+              <Text className={styles.footerTotalLabel}>
+                Łącznie w wybranym okresie
+              </Text>
               <Text strong className={styles.footerTotalAmount}>
                 {formatPLN(totalAmount)} zł
               </Text>
             </div>
           </div>
 
+          {/* Tekst pod tabelą */}
           <Row justify="space-between" align="middle" className={styles.pageFooterMeta}>
             <Col>
               <Text type="secondary">
@@ -216,14 +203,13 @@ export const HistoryPage = () => {
               </Text>
             </Col>
             <Col>
-              <Text type="secondary">Najedź na wiersz, aby edytować lub usunąć wydatek.</Text>
+              <Text type="secondary">
+                Najedź na wiersz, aby edytować lub usunąć wydatek.
+              </Text>
             </Col>
           </Row>
         </>
       )}
-
-      {/* Modal dodawania nowego wydatku */}
-      <AddExpenseModal open={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </>
   );
 };

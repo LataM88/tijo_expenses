@@ -1,19 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { RightOutlined, ArrowDownOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Row, Col, Typography, Spin, Empty } from 'antd';
 import { Link } from 'react-router-dom';
 import { AddExpenseButton } from '../../components/AddExpenseButton/AddExpenseButton';
-import { AddExpenseModal } from '../../components/AddExpenseModal/AddExpenseModal';
 import { useExpenses } from '../../hooks/useExpenses';
+import { formatPLN, formatMonthPL } from '../../utils/formatters';
 import styles from './Dashboard.module.css';
 
 const { Title, Paragraph, Text } = Typography;
-
-const formatPLN = (amount: number) =>
-  amount.toLocaleString('pl-PL', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
 
 // SVG Donut Chart z rzeczywistymi danymi
 const DonutChart = ({
@@ -27,8 +21,6 @@ const DonutChart = ({
   const strokeWidth = 36;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-
-  let cumulativePercent = 0;
 
   if (total === 0 || categories.length === 0) {
     return (
@@ -52,36 +44,44 @@ const DonutChart = ({
     );
   }
 
+  // Obliczenie wycinków w sposób czysty (bez mutowania zmiennych podczas renderowania)
+  const slices = categories.map((cat, index) => {
+    const prevAmount = categories
+      .slice(0, index)
+      .reduce((sum, c) => sum + c.amount, 0);
+    const percent = total > 0 ? cat.amount / total : 0;
+    const prevPercent = total > 0 ? prevAmount / total : 0;
+
+    return {
+      color: cat.color || '#6b7280',
+      strokeDasharray: `${circumference * percent} ${circumference * (1 - percent)}`,
+      strokeDashoffset: -circumference * prevPercent,
+    };
+  });
+
   return (
     <div className={styles.donutWrapper}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {categories.map((cat, i) => {
-          const percent = total > 0 ? cat.amount / total : 0;
-          const strokeDasharray = `${circumference * percent} ${circumference * (1 - percent)}`;
-          const strokeDashoffset = -circumference * cumulativePercent;
-          cumulativePercent += percent;
-
-          return (
-            <circle
-              key={i}
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke={cat.color || '#6b7280'}
-              strokeWidth={strokeWidth}
-              strokeDasharray={strokeDasharray}
-              strokeDashoffset={strokeDashoffset}
-              transform={`rotate(-90 ${size / 2} ${size / 2})`}
-              style={{ transition: 'stroke-dasharray 0.6s ease' }}
-            />
-          );
-        })}
+        {slices.map((slice, i) => (
+          <circle
+            key={i}
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={slice.color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={slice.strokeDasharray}
+            strokeDashoffset={slice.strokeDashoffset}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            style={{ transition: 'stroke-dasharray 0.6s ease' }}
+          />
+        ))}
       </svg>
       <div className={styles.donutCenter}>
         <Text className={styles.donutCenterLabel}>Łącznie</Text>
         <Text strong className={styles.donutCenterAmount}>
-          {total.toLocaleString('pl-PL')} zł
+          {formatPLN(total)} zł
         </Text>
         <Text className={styles.donutCenterCount}>
           {categories.length} {categories.length === 1 ? 'kategoria' : 'kategorii'}
@@ -92,13 +92,10 @@ const DonutChart = ({
 };
 
 export const Dashboard = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const { data: expenses = [], isLoading, error } = useExpenses();
 
+  const formattedMonth = formatMonthPL();
   const today = new Date();
-  const currentMonthName = today.toLocaleString('pl-PL', { month: 'long', year: 'numeric' });
-  const formattedMonth =
-    currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
   const dayOfMonth = today.getDate();
 
   // Przetwarzanie rzeczywistych danych pobranych z endpointu
@@ -284,7 +281,7 @@ export const Dashboard = () => {
                 </Col>
                 <Col xs={24} md={12} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 20 }}>
                   <Text strong className={styles.lastExpenseAmount}>
-                    {formatPLN(Number(lastExpense.amount))} zł
+                    {formatPLN(lastExpense.amount)} zł
                   </Text>
                   <Link to="/historia" className={styles.lastExpenseLink}>
                     Zobacz historię <RightOutlined />
@@ -297,13 +294,7 @@ export const Dashboard = () => {
       )}
 
       {/* Przycisk "Dodaj wydatek" */}
-      <AddExpenseButton fixed onClick={() => setIsModalOpen(true)} />
-
-      {/* Modal dodawania nowego wydatku */}
-      <AddExpenseModal
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
+      <AddExpenseButton fixed onClick={() => {}} />
     </>
   );
 };

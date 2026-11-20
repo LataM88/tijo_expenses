@@ -36,3 +36,14 @@ export async function createCategory(data: CategoryCreate): Promise<Category> {
   }
   return response.json();
 }
+
+export async function deleteCategory(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.detail || 'Błąd podczas usuwania kategorii');
+  }
+}

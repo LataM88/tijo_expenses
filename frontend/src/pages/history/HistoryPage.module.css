@@ -1,6 +1,3 @@
-/* ========== HISTORIA WYDATKÓW ========== */
-
-/* Header */
 .header {
   display: flex;
   justify-content: space-between;
@@ -229,7 +226,9 @@
   align-items: center;
   justify-content: center;
   color: var(--color-text-muted);
-  transition: color 0.15s, background-color 0.15s;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 }
 
 .editBtn:hover {
