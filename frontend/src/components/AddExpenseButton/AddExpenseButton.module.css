@@ -1,0 +1,49 @@
+/* ========== PRZYCISK "DODAJ WYDATEK" ========== */
+.addExpenseButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+  white-space: nowrap;
+}
+
+.addExpenseButton:hover {
+  background-color: var(--color-primary-dark);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.addExpenseButton:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.addExpenseButton:disabled {
+  background-color: var(--color-text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.icon {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* Wariant fixed (prawy dolny róg) */
+.fixed {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 50;
+}

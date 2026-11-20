@@ -30,14 +30,3 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     id: int | None = None
     email: str | None = None
-
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    id: int | None = None
-    email: str | None = None

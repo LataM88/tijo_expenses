@@ -5,5 +5,11 @@ from app.schemas.user_schema import (
     UserLogin,
     UserOut,
 )
+from app.schemas.category_schema import CategoryCreate, CategoryOut
+from app.schemas.expense_schema import ExpenseCreate, ExpenseOut
 
-__all__ = ["UserCreate", "UserOut", "UserLogin", "Token", "TokenData"]
+__all__ = [
+    "UserCreate", "UserOut", "UserLogin", "Token", "TokenData",
+    "CategoryCreate", "CategoryOut",
+    "ExpenseCreate", "ExpenseOut",
+]
