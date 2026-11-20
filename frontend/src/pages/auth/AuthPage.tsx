@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Col, Row, Typography, Alert } from 'antd';
 import { useForm } from 'react-hook-form';
 import type { LoginRequest, Signup } from '../../types/types';
 import { useLogin, useRegister } from '../../hooks/useAuth';
+import { useAuthContext } from '../../context';
 import { Button } from '../../components/Button/Button';
 import styles from './AuthPage.module.css';
 
@@ -13,6 +14,14 @@ export const AuthPage = () => {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuthContext();
+
+  // Jeśli użytkownik jest już zalogowany, automatycznie przekieruj na pulpit
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Formularz logowania
   const {
@@ -41,7 +50,8 @@ export const AuthPage = () => {
 
   const onLoginSubmit = (data: LoginRequest) => {
     loginMutation.mutate(data, {
-      onSuccess: () => {
+      onSuccess: (res) => {
+        login(res.access_token, res.token_type);
         resetLogin();
         navigate('/dashboard');
       },

@@ -6,20 +6,21 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuthContext } from '../../context';
 import styles from './Sidebar.module.css';
 
 const navItems = [
   { path: '/dashboard', label: 'Pulpit', icon: <AppstoreOutlined /> },
-  { path: '/historia', label: 'Historia', icon: <HistoryOutlined /> },
-  { path: '/kategorie', label: 'Kategorie', icon: <TagsOutlined /> },
+  { path: '/hisotry', label: 'Historia', icon: <HistoryOutlined /> },
+  { path: '/categories', label: 'Kategorie', icon: <TagsOutlined /> },
 ];
 
 export const Sidebar = () => {
   const navigate = useNavigate();
+  const { logout } = useAuthContext();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('token_type');
+    logout();
     navigate('/');
   };
 
@@ -38,9 +39,7 @@ export const Sidebar = () => {
             <NavLink
               key={item.path}
               to={item.path}
-              className={({ isActive }) =>
-                `${styles.navItem} ${isActive ? styles.active : ''}`
-              }
+              className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
             >
               <span className={styles.navIcon}>{item.icon}</span>
               {item.label}
