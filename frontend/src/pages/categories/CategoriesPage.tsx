@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import {
-  RightOutlined,
   DeleteOutlined,
   CheckOutlined,
   TagOutlined,
@@ -9,9 +8,11 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons';
 import { Row, Col, Typography, Spin, Empty, Popconfirm, Alert } from 'antd';
+import { MonthDropdown } from '../../components/MonthDropdown/MonthDropdown';
 import { useCategories, useCreateCategory, useDeleteCategory } from '../../hooks/useCategories';
 import { useExpenses } from '../../hooks/useExpenses';
-import { formatPLN, formatMonthPL, formatExpenseCount } from '../../utils/formatters';
+import { useDateFilterStore } from '../../store/useDateFilterStore';
+import { formatPLN, formatExpenseCount } from '../../utils/formatters';
 import styles from './CategoriesPage.module.css';
 
 const { Title, Paragraph, Text } = Typography;
@@ -20,13 +21,14 @@ const PALETTE = [
   '#4f46e5', // Fiolet indygo
   '#8b5cf6', // Jasny fiolet
   '#10b981', // Morski / szmaragd
-  '#22c55e', // Zielony
+  '#02792dff', // Zielony
   '#f59e0b', // Żółty / bursztyn
   '#f97316', // Pomarańczowy
-  '#f43f5e', // Różowy
+  '#e00025ff', // Czerwony
   '#0ea5e9', // Błękitny
   '#64748b', // Stalowy
-  '#6b7280', // Szary
+  '#1d2533ff', // Ciemny granat
+  '#1d648dff', // Ciemny turkusowy
 ];
 
 export const CategoriesPage = () => {
@@ -34,17 +36,24 @@ export const CategoriesPage = () => {
   const [selectedColor, setSelectedColor] = useState(PALETTE[0]);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const { selectedDate } = useDateFilterStore();
   const { data: categories = [], isLoading, error } = useCategories();
   const { data: expenses = [] } = useExpenses();
   const createMutation = useCreateCategory();
   const deleteMutation = useDeleteCategory();
 
-  const formattedMonth = formatMonthPL();
-
-  // Obliczenie statystyk dla każdej kategorii na podstawie rzeczywistych wydatków
+  // Obliczenie statystyk dla każdej kategorii na podstawie wydatków z wybranego miesiąca
   const categoryStats = useMemo(() => {
+    const y = selectedDate.getFullYear();
+    const m = selectedDate.getMonth();
+    const monthlyExpenses = expenses.filter((exp) => {
+      if (!exp.date) return false;
+      const [expY, expM] = exp.date.split('-').map(Number);
+      return expY === y && expM === m + 1;
+    });
+
     const stats: Record<number, { count: number; total: number }> = {};
-    for (const exp of expenses) {
+    for (const exp of monthlyExpenses) {
       const catId = exp.category_id || exp.category?.id;
       if (catId) {
         if (!stats[catId]) {
@@ -55,7 +64,7 @@ export const CategoriesPage = () => {
       }
     }
     return stats;
-  }, [expenses]);
+  }, [expenses, selectedDate]);
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,16 +79,18 @@ export const CategoriesPage = () => {
         color: selectedColor,
       });
       setName('');
-    } catch (err: any) {
-      setFormError(err?.message || 'Nie udało się dodać kategorii');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Nie udało się dodać kategorii';
+      setFormError(msg);
     }
   };
 
   const handleDeleteCategory = async (id: number) => {
     try {
       await deleteMutation.mutateAsync(id);
-    } catch (err: any) {
-      alert(err?.message || 'Nie udało się usunąć kategorii');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Nie udało się usunąć kategorii';
+      alert(msg);
     }
   };
 
@@ -97,9 +108,7 @@ export const CategoriesPage = () => {
           </Paragraph>
         </Col>
         <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
-          <button className={styles.monthDropdown}>
-            {formattedMonth} <RightOutlined />
-          </button>
+          <MonthDropdown />
         </Col>
       </Row>
 
@@ -161,11 +170,7 @@ export const CategoriesPage = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className={styles.submitBtn}
-            disabled={createMutation.isPending}
-          >
+          <button type="submit" className={styles.submitBtn} disabled={createMutation.isPending}>
             <PlusOutlined /> {createMutation.isPending ? 'Dodawanie...' : 'Dodaj'}
           </button>
         </form>
@@ -179,9 +184,7 @@ export const CategoriesPage = () => {
           </Title>
           <span className={styles.badgeCount}>{categories.length}</span>
         </div>
-        <Text className={styles.sectionSubtitle}>
-          Kolory pojawią się na wykresie i w historii.
-        </Text>
+        <Text className={styles.sectionSubtitle}>Kolory pojawią się na wykresie i w historii.</Text>
       </div>
 
       {/* Siatka kart kategorii z Row i Col */}

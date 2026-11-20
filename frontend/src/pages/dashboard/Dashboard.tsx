@@ -2,14 +2,21 @@ import { useMemo } from 'react';
 import { RightOutlined, ArrowDownOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Row, Col, Typography, Spin, Empty } from 'antd';
 import { Link } from 'react-router-dom';
+import { Chart as ChartJS, ArcElement, Tooltip, type TooltipItem } from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
 import { AddExpenseButton } from '../../components/AddExpenseButton/AddExpenseButton';
+import { MonthDropdown } from '../../components/MonthDropdown/MonthDropdown';
 import { useExpenses } from '../../hooks/useExpenses';
-import { formatPLN, formatMonthPL } from '../../utils/formatters';
+import { useExpenseModalStore } from '../../store/useExpenseModalStore';
+import { useDateFilterStore } from '../../store/useDateFilterStore';
+import { formatPLN, formatMonthPL, formatDatePL } from '../../utils/formatters';
 import styles from './Dashboard.module.css';
+
+ChartJS.register(ArcElement, Tooltip);
 
 const { Title, Paragraph, Text } = Typography;
 
-// SVG Donut Chart z rzeczywistymi danymi
+// Wykres pierścieniowy z użyciem Chart.js (react-chartjs-2)
 const DonutChart = ({
   categories,
   total,
@@ -17,88 +24,116 @@ const DonutChart = ({
   categories: { name: string; color: string; amount: number; percent: number }[];
   total: number;
 }) => {
-  const size = 220;
-  const strokeWidth = 36;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-
   if (total === 0 || categories.length === 0) {
+    const emptyData = {
+      datasets: [
+        {
+          data: [1],
+          backgroundColor: ['#e5e7eb'],
+          borderWidth: 0,
+        },
+      ],
+    };
+
     return (
       <div className={styles.donutWrapper}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth={strokeWidth}
+        <div className={styles.donutContainer}>
+          <Doughnut
+            data={emptyData}
+            options={{
+              cutout: '74%',
+              plugins: { tooltip: { enabled: false } },
+              maintainAspectRatio: false,
+            }}
           />
-        </svg>
-        <div className={styles.donutCenter}>
-          <Text className={styles.donutCenterLabel}>Łącznie</Text>
-          <Text strong className={styles.donutCenterAmount}>0,00 zł</Text>
-          <Text className={styles.donutCenterCount}>0 kategorii</Text>
+          <div className={styles.donutCenter}>
+            <Text className={styles.donutCenterLabel}>Łącznie</Text>
+            <Text strong className={styles.donutCenterAmount}>0,00 zł</Text>
+            <Text className={styles.donutCenterCount}>0 kategorii</Text>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Obliczenie wycinków w sposób czysty (bez mutowania zmiennych podczas renderowania)
-  const slices = categories.map((cat, index) => {
-    const prevAmount = categories
-      .slice(0, index)
-      .reduce((sum, c) => sum + c.amount, 0);
-    const percent = total > 0 ? cat.amount / total : 0;
-    const prevPercent = total > 0 ? prevAmount / total : 0;
+  const chartData = {
+    labels: categories.map((c) => c.name),
+    datasets: [
+      {
+        data: categories.map((c) => c.amount),
+        backgroundColor: categories.map((c) => c.color || '#6b7280'),
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        hoverOffset: 4,
+      },
+    ],
+  };
 
-    return {
-      color: cat.color || '#6b7280',
-      strokeDasharray: `${circumference * percent} ${circumference * (1 - percent)}`,
-      strokeDashoffset: -circumference * prevPercent,
-    };
-  });
+  const chartOptions = {
+    cutout: '74%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (context: TooltipItem<'doughnut'>) => {
+            const val = Number(context.raw) || 0;
+            return ` ${context.label}: ${formatPLN(val)} zł`;
+          },
+        },
+      },
+    },
+    maintainAspectRatio: false,
+  };
 
   return (
     <div className={styles.donutWrapper}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {slices.map((slice, i) => (
-          <circle
-            key={i}
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={slice.color}
-            strokeWidth={strokeWidth}
-            strokeDasharray={slice.strokeDasharray}
-            strokeDashoffset={slice.strokeDashoffset}
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            style={{ transition: 'stroke-dasharray 0.6s ease' }}
-          />
-        ))}
-      </svg>
-      <div className={styles.donutCenter}>
-        <Text className={styles.donutCenterLabel}>Łącznie</Text>
-        <Text strong className={styles.donutCenterAmount}>
-          {formatPLN(total)} zł
-        </Text>
-        <Text className={styles.donutCenterCount}>
-          {categories.length} {categories.length === 1 ? 'kategoria' : 'kategorii'}
-        </Text>
+      <div className={styles.donutContainer}>
+        <Doughnut data={chartData} options={chartOptions} />
+        <div className={styles.donutCenter}>
+          <Text className={styles.donutCenterLabel}>Łącznie</Text>
+          <Text strong className={styles.donutCenterAmount}>
+            {formatPLN(total)} zł
+          </Text>
+          <Text className={styles.donutCenterCount}>
+            {categories.length} {categories.length === 1 ? 'kategoria' : 'kategorii'}
+          </Text>
+        </div>
       </div>
     </div>
   );
 };
 
 export const Dashboard = () => {
+  const { openModal } = useExpenseModalStore();
+  const { selectedDate } = useDateFilterStore();
   const { data: expenses = [], isLoading, error } = useExpenses();
 
-  const formattedMonth = formatMonthPL();
+  const formattedMonth = formatMonthPL(selectedDate);
   const today = new Date();
   const dayOfMonth = today.getDate();
 
-  // Przetwarzanie rzeczywistych danych pobranych z endpointu
+  // Filtrowanie wydatków według wybranego miesiąca
+  const filteredExpenses = useMemo(() => {
+    const y = selectedDate.getFullYear();
+    const m = selectedDate.getMonth();
+    return expenses.filter((exp) => {
+      if (!exp.date) return false;
+      const [expY, expM] = exp.date.split('-').map(Number);
+      return expY === y && expM === m + 1;
+    });
+  }, [expenses, selectedDate]);
+
+  // Sortowanie wydatków: najnowsza data, a przy tej samej dacie najnowsze ID (najpóźniej dodane)
+  const sortedExpenses = useMemo(() => {
+    return [...filteredExpenses].sort((a, b) => {
+      if (a.date !== b.date) {
+        return b.date.localeCompare(a.date);
+      }
+      return b.id - a.id;
+    });
+  }, [filteredExpenses]);
+
+  // Przetwarzanie danych pobranych z endpointu dla wybranego miesiąca
   const { totalAmount, categoryBreakdown, lastExpense } = useMemo(() => {
     let sum = 0;
     const catMap: Record<
@@ -106,7 +141,7 @@ export const Dashboard = () => {
       { name: string; color: string; amount: number }
     > = {};
 
-    for (const exp of expenses) {
+    for (const exp of sortedExpenses) {
       const amount = Number(exp.amount) || 0;
       sum += amount;
 
@@ -129,9 +164,9 @@ export const Dashboard = () => {
     return {
       totalAmount: sum,
       categoryBreakdown: breakdown,
-      lastExpense: expenses.length > 0 ? expenses[0] : null,
+      lastExpense: sortedExpenses.length > 0 ? sortedExpenses[0] : null,
     };
-  }, [expenses]);
+  }, [sortedExpenses]);
 
   return (
     <>
@@ -147,9 +182,7 @@ export const Dashboard = () => {
           </Paragraph>
         </Col>
         <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
-          <button className={styles.monthSelector}>
-            {formattedMonth} <RightOutlined />
-          </button>
+          <MonthDropdown />
         </Col>
       </Row>
 
@@ -166,10 +199,10 @@ export const Dashboard = () => {
         </div>
       ) : (
         <>
-          {/* Karty podsumowania z danymi dynamicznymi */}
-          <Row gutter={[16, 16]} className={styles.summaryRow}>
-            <Col xs={24} lg={16}>
-              <div className={styles.summaryCardPrimary}>
+          {/* Ciemny baner podsumowania miesiąca z dwoma przestronnymi kolumnami */}
+          <div className={styles.summaryBanner}>
+            <Row align="middle" gutter={[24, 24]}>
+              <Col xs={24} md={15} lg={16} className={styles.summaryLeftCol}>
                 <Text className={styles.summaryCardLabel}>
                   Wydatki w tym miesiącu
                 </Text>
@@ -180,24 +213,31 @@ export const Dashboard = () => {
                 <div className={styles.summaryBadge}>
                   <ArrowDownOutlined /> Bieżące podsumowanie wydatków
                 </div>
-              </div>
-            </Col>
+              </Col>
 
-            <Col xs={24} lg={8}>
-              <div className={styles.summaryCard}>
+              <Col xs={24} md={9} lg={8} className={styles.summaryRightCol}>
                 <Text strong className={styles.countCardMonth}>
                   {formattedMonth}
                 </Text>
-                <div className={styles.countCardNumber}>{expenses.length}</div>
+                <div className={styles.countCardNumber}>
+                  {filteredExpenses.length}
+                </div>
                 <Paragraph className={styles.countCardText}>
-                  zapisanych wydatków
+                  {filteredExpenses.length === 1
+                    ? 'zapisany wydatek'
+                    : filteredExpenses.length >= 2 && filteredExpenses.length <= 4
+                      ? 'zapisane wydatki'
+                      : 'zapisanych wydatków'}
                 </Paragraph>
                 <Text className={styles.countCardDate}>
-                  Stan na dzień {dayOfMonth}
+                  {selectedDate.getFullYear() === today.getFullYear() &&
+                  selectedDate.getMonth() === today.getMonth()
+                    ? `Stan na dzień ${dayOfMonth}`
+                    : `Stan na koniec miesiąca`}
                 </Text>
-              </div>
-            </Col>
-          </Row>
+              </Col>
+            </Row>
+          </div>
 
           {/* Sekcja kategorii */}
           <div className={styles.categorySection}>
@@ -220,38 +260,47 @@ export const Dashboard = () => {
 
                 <Col xs={24} md={14} lg={16}>
                   <div className={styles.categoryList}>
-                    <Row className={styles.categoryListHeader}>
-                      <Col span={12}>
-                        <Text className={styles.categoryListHeaderLabel}>Kategoria</Text>
+                    <Row align="middle" justify="space-between" className={styles.categoryListHeader}>
+                      <Col xs={12} sm={14}>
+                        <Text className={styles.categoryListHeaderLabel}>KATEGORIA</Text>
                       </Col>
-                      <Col span={8} style={{ textAlign: 'right' }}>
+                      <Col xs={12} sm={10} style={{ textAlign: 'right' }}>
                         <Text className={styles.categoryListHeaderLabel}>
-                          Kwota / Udział
+                          KWOTA / UDZIAŁ
                         </Text>
                       </Col>
-                      <Col span={4}>&nbsp;</Col>
                     </Row>
 
                     {categoryBreakdown.map((cat) => (
                       <Row
                         key={cat.name}
                         align="middle"
+                        justify="space-between"
                         className={styles.categoryRow}
                       >
-                        <Col span={12} className={styles.categoryName}>
+                        <Col xs={12} sm={14} className={styles.categoryName}>
                           <span
                             className={styles.categoryDot}
                             style={{ backgroundColor: cat.color }}
                           />
                           <Text>{cat.name}</Text>
                         </Col>
-                        <Col span={8} style={{ textAlign: 'right' }}>
+                        <Col
+                          xs={12}
+                          sm={10}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-end',
+                            gap: 20,
+                          }}
+                        >
                           <Text strong className={styles.categoryAmount}>
                             {formatPLN(cat.amount)} zł
                           </Text>
-                        </Col>
-                        <Col span={4} style={{ textAlign: 'right' }}>
-                          <Text className={styles.categoryPercent}>{cat.percent}%</Text>
+                          <Text className={styles.categoryPercent}>
+                            {cat.percent}%
+                          </Text>
                         </Col>
                       </Row>
                     ))}
@@ -272,10 +321,10 @@ export const Dashboard = () => {
                   <div>
                     <Text className={styles.lastExpenseLabel}>Ostatni wydatek</Text>
                     <Title level={4} className={styles.lastExpenseName} style={{ margin: 0 }}>
-                      {lastExpense.description || 'Wydatek'}
+                      {lastExpense.description || lastExpense.category?.name || 'Wydatek'}
                     </Title>
                     <Text className={styles.lastExpenseMeta}>
-                      {lastExpense.category?.name} · {lastExpense.date}
+                      {lastExpense.category?.name} · {formatDatePL(lastExpense.date)}
                     </Text>
                   </div>
                 </Col>
@@ -294,7 +343,7 @@ export const Dashboard = () => {
       )}
 
       {/* Przycisk "Dodaj wydatek" */}
-      <AddExpenseButton fixed onClick={() => {}} />
+      <AddExpenseButton fixed onClick={() => openModal()} />
     </>
   );
 };

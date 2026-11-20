@@ -1,3 +1,4 @@
+from datetime import date as dt_date
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
@@ -7,6 +8,13 @@ from app.schemas.expense_schema import ExpenseCreate
 
 
 def create_expense(db: Session, data: ExpenseCreate) -> Expense:
+    # Blokada daty z przyszłości
+    if data.date > dt_date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Data wydatku nie może być datą z przyszłości",
+        )
+
     # Sprawdź, czy kategoria istnieje
     category = db.query(Category).filter(Category.id == data.category_id).first()
     if not category:
@@ -33,7 +41,7 @@ def get_all_expenses(db: Session) -> list[Expense]:
     return (
         db.query(Expense)
         .options(joinedload(Expense.category))
-        .order_by(Expense.date.desc())
+        .order_by(Expense.date.desc(), Expense.id.desc())
         .all()
     )
 

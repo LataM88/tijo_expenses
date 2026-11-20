@@ -1,5 +1,5 @@
-/* ========== SIDEBAR ========== */
-.sidebar {
+/* ========== DESKTOP SIDEBAR ========== */
+.desktopSidebar {
   position: fixed;
   top: 0;
   left: 0;
@@ -26,7 +26,7 @@
   text-transform: uppercase;
 }
 
-/* Nawigacja */
+/* Nawigacja Desktop */
 .nav {
   flex: 1;
   display: flex;
@@ -70,7 +70,7 @@
   align-items: center;
 }
 
-/* Dolna sekcja */
+/* Dolna sekcja desktop */
 .bottom {
   padding: 0 16px;
   margin-top: auto;
@@ -147,4 +147,79 @@
 
 .logoutIcon {
   font-size: 16px;
+}
+
+/* ========== MOBILE BOTTOM NAVIGATION (KAFELKI NA DOLE) ========== */
+.mobileBottomNav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Ukryj boczny sidebar na telefonie */
+  .desktopSidebar {
+    display: none;
+  }
+
+  /* Pokaż dolny pasek nawigacyjny */
+  .mobileBottomNav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background-color: var(--color-sidebar-bg);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+    backdrop-filter: blur(8px);
+  }
+
+  .mobileNavItem {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 52px;
+    border-radius: var(--radius-sm);
+    color: var(--color-sidebar-text);
+    text-decoration: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 4px;
+  }
+
+  .mobileNavItem:active {
+    transform: scale(0.96);
+  }
+
+  .mobileNavIcon {
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobileNavLabel {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .mobileActive {
+    color: #ffffff;
+    background-color: rgba(79, 70, 229, 0.35);
+    font-weight: 600;
+  }
+
+  .mobileActive .mobileNavIcon {
+    color: var(--color-primary-light);
+  }
 }

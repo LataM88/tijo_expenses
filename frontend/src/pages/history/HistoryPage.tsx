@@ -8,7 +8,10 @@ import {
 } from '@ant-design/icons';
 import { Row, Col, Typography, Spin, Empty, Popconfirm } from 'antd';
 import { AddExpenseButton } from '../../components/AddExpenseButton/AddExpenseButton';
+import { MonthDropdown } from '../../components/MonthDropdown/MonthDropdown';
 import { useExpenses, useDeleteExpense } from '../../hooks/useExpenses';
+import { useExpenseModalStore } from '../../store/useExpenseModalStore';
+import { useDateFilterStore } from '../../store/useDateFilterStore';
 import { formatPLN, formatDatePL, formatMonthPL, formatExpenseCount } from '../../utils/formatters';
 import type { Expense } from '../../types/types';
 import styles from './HistoryPage.module.css';
@@ -16,15 +19,28 @@ import styles from './HistoryPage.module.css';
 const { Title, Paragraph, Text } = Typography;
 
 export const HistoryPage = () => {
+  const { openModal } = useExpenseModalStore();
+  const { selectedDate, prevMonth, nextMonth } = useDateFilterStore();
   const { data: expenses = [], isLoading, error } = useExpenses();
   const deleteMutation = useDeleteExpense();
 
-  const formattedMonth = formatMonthPL();
+  const formattedMonth = formatMonthPL(selectedDate);
 
-  // Podsumowanie rzeczywistych wydatków
+  // Filtrowanie wydatków według wybranego miesiąca
+  const filteredExpenses = useMemo(() => {
+    const y = selectedDate.getFullYear();
+    const m = selectedDate.getMonth();
+    return expenses.filter((exp) => {
+      if (!exp.date) return false;
+      const [expY, expM] = exp.date.split('-').map(Number);
+      return expY === y && expM === m + 1;
+    });
+  }, [expenses, selectedDate]);
+
+  // Podsumowanie rzeczywistych wydatków dla wybranego miesiąca
   const totalAmount = useMemo(() => {
-    return expenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  }, [expenses]);
+    return filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  }, [filteredExpenses]);
 
   const handleDelete = (id: number) => {
     deleteMutation.mutate(id);
@@ -48,9 +64,7 @@ export const HistoryPage = () => {
           </Paragraph>
         </Col>
         <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
-          <button className={styles.monthDropdown}>
-            {formattedMonth} <RightOutlined />
-          </button>
+          <MonthDropdown />
         </Col>
       </Row>
 
@@ -59,24 +73,34 @@ export const HistoryPage = () => {
         <Col>
           <div className={styles.controlsLeft}>
             <div className={styles.monthNavPill}>
-              <button className={styles.monthNavBtn} title="Poprzedni miesiąc">
+              <button
+                type="button"
+                className={styles.monthNavBtn}
+                title="Poprzedni miesiąc"
+                onClick={prevMonth}
+              >
                 <LeftOutlined />
               </button>
               <Text strong className={styles.currentMonthText}>
                 {formattedMonth}
               </Text>
-              <button className={styles.monthNavBtn} title="Następny miesiąc">
+              <button
+                type="button"
+                className={styles.monthNavBtn}
+                title="Następny miesiąc"
+                onClick={nextMonth}
+              >
                 <RightOutlined />
               </button>
             </div>
             <Text className={styles.expensesCountLabel}>
-              {formatExpenseCount(expenses.length)}
+              {formatExpenseCount(filteredExpenses.length)}
             </Text>
           </div>
         </Col>
 
         <Col>
-          <AddExpenseButton onClick={() => {}} />
+          <AddExpenseButton onClick={() => openModal()} />
         </Col>
       </Row>
 
@@ -92,9 +116,9 @@ export const HistoryPage = () => {
         <div style={{ padding: 24, textAlign: 'center' }}>
           <Text type="danger">Wystąpił błąd: {error.message}</Text>
         </div>
-      ) : expenses.length === 0 ? (
+      ) : filteredExpenses.length === 0 ? (
         <div className={styles.tableCard} style={{ padding: '60px 24px', textAlign: 'center' }}>
-          <Empty description="Brak zapisanych wydatków. Kliknij '+ Dodaj wydatek', aby dodać pierwszy!" />
+          <Empty description={`Brak zapisanych wydatków w miesiącu ${formattedMonth}.`} />
         </div>
       ) : (
         <>
@@ -120,7 +144,7 @@ export const HistoryPage = () => {
                 </tr>
               </thead>
               <tbody className={styles.tableBody}>
-                {expenses.map((expense) => {
+                {filteredExpenses.map((expense) => {
                   const categoryName = expense.category?.name || 'Inne';
                   const categoryColor = expense.category?.color || '#6b7280';
 
@@ -199,7 +223,7 @@ export const HistoryPage = () => {
           <Row justify="space-between" align="middle" className={styles.pageFooterMeta}>
             <Col>
               <Text type="secondary">
-                Pokazano {expenses.length} z {expenses.length} wydatków
+                Pokazano {filteredExpenses.length} z {filteredExpenses.length} wydatków
               </Text>
             </Col>
             <Col>

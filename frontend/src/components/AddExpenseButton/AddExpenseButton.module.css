@@ -47,3 +47,20 @@
   right: 32px;
   z-index: 50;
 }
+
+/* Responsywność na telefonie */
+@media (max-width: 768px) {
+  .addExpenseButton {
+    padding: 11px 20px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+
+  /* Na telefonie przycisk wisi tuż nad dolnym paskiem nawigacyjnym (64px + 14px) */
+  .fixed {
+    bottom: 78px;
+    right: 16px;
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.4);
+    z-index: 900;
+  }
+}

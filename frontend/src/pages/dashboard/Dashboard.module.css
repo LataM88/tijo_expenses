@@ -36,7 +36,7 @@
 }
 
 .monthSelector {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
@@ -48,31 +48,43 @@
   color: var(--color-text-primary);
   cursor: pointer;
   transition: border-color 0.15s;
+  white-space: nowrap;
 }
 
 .monthSelector:hover {
   border-color: var(--color-primary);
 }
 
-/* Karty podsumowania */
-.summaryRow {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.summaryCard {
-  background: var(--color-bg-white);
+/* Pojedynczy ciemny baner podsumowania (jak na makiecie) */
+.summaryBanner {
+  background-color: #222436;
   border-radius: var(--radius-lg);
-  padding: 28px 32px;
+  padding: 32px 36px;
   box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+  color: #ffffff;
 }
 
-.summaryCardPrimary {
-  composes: summaryCard;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  color: #ffffff;
+.summaryLeftCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.summaryRightCol {
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  padding-left: 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .summaryRightCol {
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding-left: 0;
+    padding-top: 24px;
+    margin-top: 24px;
+  }
 }
 
 .summaryCardLabel {
@@ -80,61 +92,66 @@
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.65);
   margin-bottom: 12px;
 }
 
 .summaryAmount {
-  font-size: 42px;
+  font-size: 44px;
   font-weight: 700;
   line-height: 1.1;
+  color: #ffffff;
 }
 
 .summaryAmountUnit {
   font-size: 20px;
   font-weight: 500;
   margin-left: 6px;
-  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .summaryBadge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 14px;
+  margin-top: 16px;
   padding: 6px 14px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  width: fit-content;
 }
 
-/* Karta z liczbą wydatków */
+/* Kolumna z liczbą wydatków w miesiącu */
 .countCardMonth {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 8px;
+  color: #ffffff;
+  margin-bottom: 6px;
 }
 
 .countCardNumber {
   font-size: 48px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: #ffffff;
   line-height: 1.1;
 }
 
 .countCardText {
   font-size: 14px;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.7);
   margin-top: 4px;
+  margin-bottom: 0;
 }
 
 .countCardDate {
   font-size: 13px;
-  color: var(--color-text-muted);
-  margin-top: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 10px;
 }
+
 
 /* Sekcja kategorii */
 .categorySection {
@@ -146,7 +163,7 @@
 }
 
 .categorySectionHeader {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .categorySectionTitle {
@@ -163,44 +180,56 @@
 }
 
 .categoryContent {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 40px;
-  align-items: center;
+  width: 100%;
 }
 
-/* Donut chart */
+/* Donut chart z react-chartjs-2 */
 .donutWrapper {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-height: 240px;
+}
+
+.donutContainer {
+  position: relative;
+  width: 220px;
+  height: 220px;
 }
 
 .donutCenter {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   text-align: center;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 130px;
 }
 
 .donutCenterLabel {
   font-size: 12px;
   color: var(--color-text-muted);
-  display: block;
 }
 
 .donutCenterAmount {
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--color-text-primary);
-  display: block;
-  margin-top: 2px;
+  line-height: 1.2;
+  margin: 3px 0;
+  white-space: nowrap;
 }
 
 .donutCenterCount {
   font-size: 12px;
   color: var(--color-text-muted);
-  display: block;
-  margin-top: 2px;
 }
 
 /* Lista kategorii */
@@ -209,12 +238,10 @@
 }
 
 .categoryListHeader {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 24px;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border-light);
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  width: 100%;
 }
 
 .categoryListHeaderLabel {
@@ -223,19 +250,13 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--color-text-muted);
-}
-
-.categoryListHeaderLabel:last-child {
-  text-align: right;
+  white-space: nowrap;
 }
 
 .categoryRow {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 24px;
-  align-items: center;
-  padding: 12px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--color-border-light);
+  width: 100%;
 }
 
 .categoryRow:last-child {
@@ -262,15 +283,13 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
-  text-align: right;
   white-space: nowrap;
 }
 
 .categoryPercent {
   font-size: 13px;
   color: var(--color-text-muted);
-  text-align: right;
-  min-width: 40px;
+  white-space: nowrap;
 }
 
 /* Ostatni wydatek */
@@ -349,3 +368,41 @@
   background: var(--color-primary-bg);
   border-color: var(--color-primary);
 }
+
+/* Responsywność dla urządzeń mobilnych */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .headerTitle {
+    font-size: 26px;
+  }
+
+  .summaryBanner {
+    padding: 20px 18px;
+    margin-bottom: 20px;
+  }
+
+  .summaryAmount {
+    font-size: 32px;
+  }
+
+  .categorySection {
+    padding: 20px 16px;
+    margin-bottom: 20px;
+  }
+
+  .lastExpense {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+
+  .lastExpenseAmount {
+    font-size: 18px;
+  }
+}
+
